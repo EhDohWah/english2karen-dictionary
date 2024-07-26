@@ -7,9 +7,13 @@ use Illuminate\Http\Request;
 use App\Models\Word;
 use App\Models\Pos;
 use App\Models\Translation;
+use Illuminate\Support\Facades\Validator;
 
 class WordController extends Controller
 {   
+    /**
+     * Backend - Admin related methods
+     */
 
     // show the input word index page
     public function createIndex()
@@ -47,6 +51,69 @@ class WordController extends Controller
 
         return response()->json(['message' => 'Word added successfully!'], 201);
     }
+
+    // Update method
+    public function update(Request $request, $id)
+    {
+        // Validate the request data
+        $validator = Validator::make($request->all(), [
+            'english_word' => 'required|string|max:255',
+            'part_of_speech_id' => 'required|integer|exists:Pos,id',
+            'translation' => 'required|string|max:255',
+        ]);
+
+        
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            // Find the word to update
+            $word = Word::findOrFail($id);
+
+            // Update the word
+            $word->update(['english_word' => $request->english_word]);
+
+            // Handle translations
+            $translation = $word->translations()
+                ->where('part_of_speech_id', $request->part_of_speech_id)
+                ->first();
+
+        
+
+            if ($translation) {
+                // Update the existing translation
+                $translation->update([
+                    'translation' => $request->translation,
+                ]);
+            } else {
+                // Create a new translation
+                $word->translations()->create([
+                    'part_of_speech_id' => $request->part_of_speech_id,
+                    'translation' => $request->translation,
+                ]);
+            }
+
+            return response()->json(['message' => 'Word updated successfully']);
+        } catch (\Exception $e) {
+            \Log::error('Update failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating word: ' . $e->getMessage()], 500);
+        }
+    }
+
+
+    public function destroy($id)
+    {
+        $word = Word::findOrFail($id);
+        $word->translations()->delete();
+        $word->delete();
+
+        return response()->json(['message' => 'Word deleted successfully']);
+    }
+
+
+    /* Frontend - Search related methods */
 
     // search index
     public function searchIndex()
