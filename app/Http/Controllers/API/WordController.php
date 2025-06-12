@@ -58,7 +58,9 @@ class WordController extends Controller
         // Validate the request data
         $validator = Validator::make($request->all(), [
             'english_word' => 'required|string|max:255',
-            'part_of_speech_id' => 'required|integer|exists:Pos,id',
+            // Use the correct table name for the exists rule
+            // The table storing parts of speech is named "pos"
+            'part_of_speech_id' => 'required|integer|exists:pos,id',
             'translation' => 'required|string|max:255',
         ]);
 
